@@ -1,9 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const auth = require("../../middleware/auth");
-const {
-  check,validationResult} = require("express-validator");
-  const gravatar = require("gravatar");
+const { check, validationResult } = require("express-validator");
+const gravatar = require("gravatar");
 
 const User = require("../../Models/User");
 const Company = require("../../Models/Company");
@@ -39,41 +38,61 @@ router.get("/me", auth, async (req, res) => {
 // @desc  Create or Update users profiles
 // @ access Private
 
-router.post('/' , [auth , check('status' , 'status is required').not().isEmpty(),
-check('skills' , "skills is require").not().isEmpty()
-], async( req , res)=> {
-  const errors = validationResult(req);
-  if(!errors.isEmpty()){
-    return res.status(400).json({errors: errors.array()})
+router.post(
+  "/",
+  [
+    auth,
+    check("status", "status is required").not().isEmpty(),
+    check("skills", "skills is require").not().isEmpty(),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const {
+      name,
+      status,
+      location,
+      website,
+      skills,
+    } = req.body;
+
+    const studentprofileFields = {};
+    if (name) studentprofileFields.name = name;
+    // if (email) StudentprofileFields.email = email;
+    // if (password) StudentprofileFields.password = location;
+    if (website) studentprofileFields.website = website;
+    if (status) studentprofileFields.status = status;
+    if (location) studentprofileFields.location = location;
+    if (skills) {
+      studentprofileFields.skills = skills
+        .split(",")
+        .map((skill) => skill.trim());
+    }
+    try {
+      //update
+      profile = await User.findOneAndUpdate(
+        { _id: req.user.id },
+        { $set: studentprofileFields },
+        {useFindAndModify: false}
+      );
+      profile.save();
+      return res.json(studentprofile);
+    } catch (err) {
+      console.error(err.message);
+      res.status(500).send("Server Error");
+    }
   }
-  const {
-    name,
-    email,
-    __t,
-    password,
-    company,
-    location,
-    website,
-    skills
-  } = req.body;
-  const profileFields = {};
-  profileFields.user = req.user.__t.id;
-  if(company) profileFields.company = company;
-  if(name) profileFields.name = name;
-  if(email) profileFields.email = email;
-  if(password) profileFields.password = location;
-  if(website) profileFields.website = website;
-  if(skills) profileFields.skills = skills;
-  if(location) profileFields.location = location;
+);
 
-
-})
-// router.get('/' , async (req , res) =>{
-//   try {
-//     const profiles = await Profile.find().populate('user' , ['name' , 'avatar']);
-//     res.json(profiles)
-//   } catch (err) {
-//     res.status(500).send('server Error')
-//   }
-// } )
+router.get('/' , auth , async (req , res) =>{
+  try {
+    const profiles = await User.find().populate('user' , ['name' , 'avatar']);
+    res.json(profiles)
+  } catch (err) {
+    res.status(500).send('server Error')
+  }
+} )
 module.exports = router;
